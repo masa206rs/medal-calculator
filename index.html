@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>抽選箱メダル配分計算機</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.6;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+
+    .note {
+      background: #f6f8fa;
+      border-left: 5px solid #4f7cff;
+      padding: 12px 16px;
+      margin: 16px 0 24px;
+    }
+
+    .input-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: right;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .card .label {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .card .value {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .warning {
+      margin-top: 16px;
+      color: #b00020;
+      font-weight: bold;
+    }
+
+    @media (max-width: 700px) {
+      .input-area,
+      .summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>抽選箱メダル配分計算機</h1>
+
+  <div class="note">
+    参加者数は <strong>1096人固定</strong>。<br>
+    景品数を入力すると、3つの抽選箱に入れる「あたり」と「ハズレ」の数を自動計算します。
+  </div>
+
+  <div class="input-area">
+    <div>
+      <label for="participantCount">抽選参加者数</label>
+      <input id="participantCount" type="number" value="1096" readonly />
+    </div>
+
+    <div>
+      <label for="prizeCount">景品数（あたり数）</label>
+      <input id="prizeCount" type="number" value="86" min="0" />
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="card">
+      <div class="label">参加者数</div>
+      <div class="value" id="summaryParticipants">1096</div>
+    </div>
+    <div class="card">
+      <div class="label">あたり</div>
+      <div class="value" id="summaryWins">86</div>
+    </div>
+    <div class="card">
+      <div class="label">ハズレ</div>
+      <div class="value" id="summaryLosses">1010</div>
+    </div>
+    <div class="card">
+      <div class="label">当選確率</div>
+      <div class="value" id="summaryRate">7.85%</div>
+    </div>
+  </div>
+
+  <div id="warning" class="warning"></div>
+
+  <h2>3つの抽選箱への配分</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>抽選箱</th>
+        <th>あたり</th>
+        <th>ハズレ</th>
+        <th>合計</th>
+      </tr>
+    </thead>
+    <tbody id="boxTableBody"></tbody>
+    <tfoot>
+      <tr>
+        <th>合計</th>
+        <th id="totalWins">0</th>
+        <th id="totalLosses">0</th>
+        <th id="totalMedals">0</th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <script>
+    const FIXED_PARTICIPANTS = 1096;
+    const BOX_COUNT = 3;
+
+    const prizeInput = document.getElementById("prizeCount");
+    const warning = document.getElementById("warning");
+
+    const summaryParticipants = document.getElementById("summaryParticipants");
+    const summaryWins = document.getElementById("summaryWins");
+    const summaryLosses = document.getElementById("summaryLosses");
+    const summaryRate = document.getElementById("summaryRate");
+
+    const boxTableBody = document.getElementById("boxTableBody");
+    const totalWins = document.getElementById("totalWins");
+    const totalLosses = document.getElementById("totalLosses");
+    const totalMedals = document.getElementById("totalMedals");
+
+    function distribute(total, boxCount) {
+      const base = Math.floor(total / boxCount);
+      const remainder = total % boxCount;
+
+      return Array.from({ length: boxCount }, (_, index) => {
+        return base + (index < remainder ? 1 : 0);
+      });
+    }
+
+    function calculate() {
+      const prizeCount = Number(prizeInput.value);
+
+      warning.textContent = "";
+
+      if (Number.isNaN(prizeCount) || prizeCount < 0) {
+        warning.textContent = "景品数は0以上の数字で入力してください。";
+        return;
+      }
+
+      if (prizeCount > FIXED_PARTICIPANTS) {
+        warning.textContent = "景品数が参加者数を超えています。景品数を1096以下にしてください。";
+        return;
+      }
+
+      const winCount = prizeCount;
+      const loseCount = FIXED_PARTICIPANTS - winCount;
+      const winRate = (winCount / FIXED_PARTICIPANTS) * 100;
+
+      const winsByBox = distribute(winCount, BOX_COUNT);
+      const lossesByBox = distribute(loseCount, BOX_COUNT);
+
+      summaryParticipants.textContent = FIXED_PARTICIPANTS.toLocaleString();
+      summaryWins.textContent = winCount.toLocaleString();
+      summaryLosses.textContent = loseCount.toLocaleString();
+      summaryRate.textContent = `${winRate.toFixed(2)}%`;
+
+      boxTableBody.innerHTML = "";
+
+      let winTotal = 0;
+      let lossTotal = 0;
+      let medalTotal = 0;
+
+      for (let i = 0; i < BOX_COUNT; i++) {
+        const boxWin = winsByBox[i];
+        const boxLoss = lossesByBox[i];
+        const boxTotal = boxWin + boxLoss;
+
+        winTotal += boxWin;
+        lossTotal += boxLoss;
+        medalTotal += boxTotal;
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>箱${String.fromCharCode(65 + i)}</td>
+          <td>${boxWin.toLocaleString()}</td>
+          <td>${boxLoss.toLocaleString()}</td>
+          <td>${boxTotal.toLocaleString()}</td>
+        `;
+
+        boxTableBody.appendChild(row);
+      }
+
+      totalWins.textContent = winTotal.toLocaleString();
+      totalLosses.textContent = lossTotal.toLocaleString();
+      totalMedals.textContent = medalTotal.toLocaleString();
+    }
+
+    prizeInput.addEventListener("input", calculate);
+
+    calculate();
+  </script>
+</body>
+</html>
