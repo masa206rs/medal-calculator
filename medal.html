@@ -69,7 +69,7 @@
 
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 12px;
       margin-top: 20px;
     }
@@ -109,8 +109,9 @@
   <h1>抽選箱メダル配分計算機</h1>
 
   <div class="note">
-    参加者数は <strong>1096人固定</strong>。<br>
-    景品数を入力すると、3つの抽選箱に入れる「あたり」と「ハズレ」の数を自動計算します。
+    抽選会対象の前売り参加者数は1,096人。<br>
+    景品数を入力すると、3つの抽選箱に入れる「あたり」と「はずれ」の数を計算します。<br><br>
+    受付クローズ後に当日参加者数を確認し、３当分した数を各抽選箱に追加投入してください。
   </div>
 
   <div class="input-area">
@@ -126,18 +127,6 @@
   </div>
 
   <div class="summary">
-    <div class="card">
-      <div class="label">参加者数</div>
-      <div class="value" id="summaryParticipants">1096</div>
-    </div>
-    <div class="card">
-      <div class="label">あたり</div>
-      <div class="value" id="summaryWins">86</div>
-    </div>
-    <div class="card">
-      <div class="label">ハズレ</div>
-      <div class="value" id="summaryLosses">1010</div>
-    </div>
     <div class="card">
       <div class="label">当選確率</div>
       <div class="value" id="summaryRate">7.85%</div>
@@ -175,9 +164,6 @@
     const prizeInput = document.getElementById("prizeCount");
     const warning = document.getElementById("warning");
 
-    const summaryParticipants = document.getElementById("summaryParticipants");
-    const summaryWins = document.getElementById("summaryWins");
-    const summaryLosses = document.getElementById("summaryLosses");
     const summaryRate = document.getElementById("summaryRate");
 
     const boxTableBody = document.getElementById("boxTableBody");
@@ -216,9 +202,6 @@
       const winsByBox = distribute(winCount, BOX_COUNT);
       const lossesByBox = distribute(loseCount, BOX_COUNT);
 
-      summaryParticipants.textContent = FIXED_PARTICIPANTS.toLocaleString();
-      summaryWins.textContent = winCount.toLocaleString();
-      summaryLosses.textContent = loseCount.toLocaleString();
       summaryRate.textContent = `${winRate.toFixed(2)}%`;
 
       boxTableBody.innerHTML = "";
